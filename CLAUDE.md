@@ -16,4 +16,4 @@ On a 401 from Admin API: `clearToken()` from lib/token.js, then retry once.
 - Never log secrets (client secret, access token), including in error messages.
 - Every outbound request gets a timeout; validate user input.
 - If unsure about a Shopify API detail, check shopify.dev instead of guessing.
-- The client reads the code: keep it short and readable.
+- keep the code short, plain and easy to follow.

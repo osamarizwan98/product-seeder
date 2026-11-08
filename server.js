@@ -11,6 +11,7 @@ const app = express();
 app.disable('x-powered-by');
 
 let seeding = false;
+let lastSeedResults = null; // in memory only: shown on "/?seeded=1" after the redirect
 
 // Everything except the secret is safe to show in the page.
 const publicSettings = ({ shop, clientId, clientSecret }) => ({ shop, clientId, hasSecret: Boolean(clientSecret) });
@@ -19,7 +20,9 @@ app.use((req, res, next) => {
   res.set({
     'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",
     'X-Content-Type-Options': 'nosniff',
-    'Referrer-Policy': 'no-referrer',
+    // Must stay 'same-origin': with 'no-referrer' browsers send "Origin: null" on
+    // same-origin form POSTs and the origin check would reject them (403).
+    'Referrer-Policy': 'same-origin',
     'X-Frame-Options': 'DENY',
   });
   next();
@@ -46,8 +49,16 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: false, limit: '10kb' }));
 
 app.get('/', async (req, res) => {
-  res.send(renderPage({ settings: publicSettings(await loadSettings()) }));
+  const settings = publicSettings(await loadSettings());
+  if (req.query.seeded === '1' && lastSeedResults) {
+    return res.send(renderPage({ settings, results: lastSeedResults, message: 'Seed finished.' }));
+  }
+  const message = req.query.saved === '1' ? 'Settings saved.' : undefined;
+  res.send(renderPage({ settings, message }));
 });
+
+// Old tabs/bookmarks on a POST-only URL land on the main page instead of a 404.
+app.get(['/settings', '/seed'], (req, res) => res.redirect('/'));
 
 app.post('/settings', async (req, res) => {
   const { shop, clientId, clientSecret } = req.body ?? {};
@@ -58,7 +69,8 @@ app.post('/settings', async (req, res) => {
     const settings = { ...publicSettings(await loadSettings()), shop: shop ?? '', clientId: clientId ?? '' };
     return res.status(400).send(renderPage({ settings, error: err.message }));
   }
-  res.send(renderPage({ settings: publicSettings(await loadSettings()), message: 'Settings saved.' }));
+  // Post/Redirect/Get: the URL ends on "/", so a reload never re-posts or hits /settings.
+  res.redirect(303, '/?saved=1');
 });
 
 app.post('/seed', async (req, res) => {
@@ -67,14 +79,15 @@ app.post('/seed', async (req, res) => {
     return res.status(409).send(renderPage({ settings, error: 'A seed is already running. Try again when it finishes.' }));
   }
   seeding = true; // set before any await so two requests can't both start
+  lastSeedResults = null;
   try {
     const settings = await loadSettings();
     const view = publicSettings(settings);
     if (!view.shop || !view.clientId || !view.hasSecret) {
       return res.status(400).send(renderPage({ settings: view, error: 'Settings are incomplete. Save them first.' }));
     }
-    const results = await seedProducts(settings);
-    res.send(renderPage({ settings: view, results, message: 'Seed finished.' }));
+    lastSeedResults = await seedProducts(settings);
+    res.redirect(303, '/?seeded=1'); // Post/Redirect/Get: a reload can't start a second seed
   } finally {
     seeding = false;
   }
