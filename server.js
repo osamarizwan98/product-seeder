@@ -18,12 +18,8 @@ const publicSettings = ({ shop, clientId, clientSecret }) => ({ shop, clientId, 
 
 app.use((req, res, next) => {
   res.set({
-    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     'X-Content-Type-Options': 'nosniff',
-    // Must stay 'same-origin': with 'no-referrer' browsers send "Origin: null" on
-    // same-origin form POSTs and the origin check would reject them (403).
-    'Referrer-Policy': 'same-origin',
-    'X-Frame-Options': 'DENY',
   });
   next();
 });
@@ -57,9 +53,6 @@ app.get('/', async (req, res) => {
   res.send(renderPage({ settings, message }));
 });
 
-// Old tabs/bookmarks on a POST-only URL land on the main page instead of a 404.
-app.get(['/settings', '/seed'], (req, res) => res.redirect('/'));
-
 app.post('/settings', async (req, res) => {
   const { shop, clientId, clientSecret } = req.body ?? {};
   try {
@@ -86,7 +79,12 @@ app.post('/seed', async (req, res) => {
     if (!view.shop || !view.clientId || !view.hasSecret) {
       return res.status(400).send(renderPage({ settings: view, error: 'Settings are incomplete. Save them first.' }));
     }
-    lastSeedResults = await seedProducts(settings);
+    try {
+      lastSeedResults = await seedProducts(settings);
+    } catch (err) {
+      console.error(`Seed failed: ${err.message}`);
+      return res.status(502).send(renderPage({ settings: view, error: err.message }));
+    }
     res.redirect(303, '/?seeded=1'); // Post/Redirect/Get: a reload can't start a second seed
   } finally {
     seeding = false;

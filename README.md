@@ -52,16 +52,18 @@ lib/token.js           Client-credentials token, in-memory cache, shop domain va
 lib/shopify.js         Admin GraphQL request with timeout and one retry on 401
 lib/dummyjson.js       Fetches and validates products from dummyjson.com
 lib/seed.js            Skip-or-create logic per product (productByIdentifier + productSet)
-lib/view.js            Server-rendered HTML page, all values escaped
+lib/view.js            Server-rendered HTML page, all outside values escaped
 data/settings.json     Saved settings (created on first save, gitignored)
 ```
 
 ## Notes and limits
 
 - Settings, including the client secret, are stored in plain text in `data/settings.json`
-  (gitignored, file mode 0600). Intended for local use.
+  (gitignored, created with file mode 0600). Intended for local use.
 - The server only listens on 127.0.0.1. It rejects requests with an unexpected Host header
   and POST requests with a cross-origin Origin header.
+- Every response sets a Content-Security-Policy (including `frame-ancestors 'none'`) and
+  `X-Content-Type-Options: nosniff`.
 - The latest seed results are kept in memory and are lost on restart.
 - Seeding runs sequentially in one request; fine for a few products, not for large catalogs.
 - The access token is never written to disk and never shown in the UI.
