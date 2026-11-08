@@ -33,7 +33,8 @@ The server prints its URL: `http://127.0.0.1:3000` (set `PORT` to use another po
 
 ## How it works
 
-- Token: client-credentials grant, cached in memory until 60 seconds before it expires,
+- Token: client-credentials grant, cached in memory until 60 seconds before the
+  `expires_in` from Shopify's response (a response without a valid one is an error),
   cleared when settings are saved. On a 401 from the Admin API the token is cleared,
   fetched again and the request is retried once.
 - Seeding: products are created with the `productSet` mutation, in order, one at a time.
@@ -59,11 +60,12 @@ data/settings.json     Saved settings (created on first save, gitignored)
 ## Notes and limits
 
 - Settings, including the client secret, are stored in plain text in `data/settings.json`
-  (gitignored, created with file mode 0600). Intended for local use.
+  (gitignored, set to file mode 0600 on every save; mode bits have no effect on Windows).
+  Intended for local use.
 - The server only listens on 127.0.0.1. It rejects requests with an unexpected Host header
   and POST requests with a cross-origin Origin header.
-- Every response sets a Content-Security-Policy (including `frame-ancestors 'none'`) and
-  `X-Content-Type-Options: nosniff`.
+- Every response sets a Content-Security-Policy (including `frame-ancestors 'none'`),
+  `X-Content-Type-Options: nosniff` and `Cache-Control: no-store`.
 - The latest seed results are kept in memory and are lost on restart.
 - Seeding runs sequentially in one request; fine for a few products, not for large catalogs.
 - The access token is never written to disk and never shown in the UI.

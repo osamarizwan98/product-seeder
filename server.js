@@ -20,6 +20,7 @@ app.use((req, res, next) => {
   res.set({
     'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store',
   });
   next();
 });
