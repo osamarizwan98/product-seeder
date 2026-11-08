@@ -6,7 +6,7 @@ API (API version 2026-10), each with 2 variants (Size S and M) and an image.
 
 ## Requirements
 
-- Node.js 20.6 or newer (`engines` in package.json; the check scripts use `--env-file`).
+- Node.js 20 or newer.
 - A Shopify Partner organization.
 - An app created in the Dev Dashboard, and a dev store created from the same organization.
 
@@ -31,16 +31,6 @@ The server prints its URL: `http://127.0.0.1:3000` (set `PORT` to use another po
 `npm run dev` restarts on file changes). Open it, save the shop domain
 (`your-store.myshopify.com`), Client ID and Client secret, then click "Seed store".
 
-`.env.example` is only for the check scripts. Copy it to `.env` and fill in
-`SHOP_DOMAIN`, `SHOPIFY_CLIENT_ID` and `SHOPIFY_CLIENT_SECRET`:
-
-```
-npm run check-token                          # requests an access token, prints scopes and expiry
-npm run check-graphql                        # queries the shop name and one product
-node scripts/check-dummyjson.js              # prints the source products (no .env needed)
-node --env-file=.env scripts/check-seed.js   # runs the seed from the terminal (creates products)
-```
-
 ## How it works
 
 - Token: client-credentials grant, cached in memory until 60 seconds before it expires,
@@ -63,9 +53,7 @@ lib/shopify.js         Admin GraphQL request with timeout and one retry on 401
 lib/dummyjson.js       Fetches and validates products from dummyjson.com
 lib/seed.js            Skip-or-create logic per product (productByIdentifier + productSet)
 lib/view.js            Server-rendered HTML page, all values escaped
-scripts/check-*.js     Manual check scripts (token, GraphQL, dummyjson, seed)
 data/settings.json     Saved settings (created on first save, gitignored)
-.env.example           Variable names for the check scripts
 ```
 
 ## Notes and limits
